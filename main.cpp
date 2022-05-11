@@ -1,3 +1,5 @@
+// A C++ implementation of https://crccalc.com/
+
 #include <iostream>
 
 unsigned reverse(unsigned n, unsigned level)
@@ -12,6 +14,18 @@ unsigned reverse(unsigned n, unsigned level)
   if (level & 0x4)
     n = (n & 0x0000FFFF) << 16 | (n & 0xFFFF0000) >> 16;
   return n;
+}
+
+unsigned crc8(const char *data, int size, unsigned poly, unsigned init, bool RefIn, bool RefOut, unsigned XorOut)
+{
+  unsigned crc = init;
+  while (--size >= 0) {
+    crc ^= reverse(*data++, RefIn ? 1 : 0);
+    for (int i = 0; i < 8; ++i)
+      crc = (crc & 0x80) ? crc << 1 ^ poly : crc << 1;
+  }
+  crc ^= XorOut;
+  return reverse(crc, RefOut ? 1 : 0) & 0x000000FF;
 }
 
 unsigned crc16(const char *data, int size, unsigned poly, unsigned init, bool RefIn, bool RefOut, unsigned XorOut)
@@ -39,6 +53,17 @@ unsigned crc32(const char *data, int size, unsigned poly, unsigned init, bool Re
 }
 
 //      Name                Poly          Init            RefIn   RefOut      XorOut
+#define CRC8 0x07, 0x00, false, false, 0x00
+#define CRC8_CDMA2000 0x9B, 0xFF, false, false, 0x00
+#define CRC8_DARC 0x39, 0x00, true, true, 0x00
+#define CRC8_DVB_S2 0xD5, 0x00, false, false, 0x00
+#define CRC8_EBU 0x1D, 0xFF, true, true, 0x00
+#define CRC8_I_CODE 0x1D, 0xFD, false, false, 0x00
+#define CRC8_ITU 0x07, 0x00, false, false, 0x55
+#define CRC8_MAXIM 0x31, 0x00, true, true, 0x00
+#define CRC8_ROHC 0x07, 0xFF, true, true, 0x00
+#define CRC8_WCDMA 0x9B, 0x00, true, true, 0x00
+
 #define CRC16_ARC 0x8005, 0, true, true, 0
 #define CRC16_AUG_CCITT 0x1021, 0x1D0F, false, false, 0
 #define CRC16_BUYPASS 0x8005, 0, false, false, 0
@@ -77,8 +102,20 @@ int main()
 {
   char data[] = "123456789";
 
-#define TEST_CRC16(crc_type, val) \
-  std::cout << #crc_type << '\t' << (crc16(data, 9, crc_type) == val) << '\n';
+#define TEST_CRC8(crc_type, val) std::cout << #crc_type << '\t' << (crc8(data, 9, crc_type) == val) << '\n';
+
+  TEST_CRC8(CRC8, 0xF4);
+  TEST_CRC8(CRC8_CDMA2000, 0xDA);
+  TEST_CRC8(CRC8_DARC, 0x15);
+  TEST_CRC8(CRC8_DVB_S2, 0xBC);
+  TEST_CRC8(CRC8_EBU, 0x97);
+  TEST_CRC8(CRC8_I_CODE, 0x7E);
+  TEST_CRC8(CRC8_ITU, 0xA1);
+  TEST_CRC8(CRC8_MAXIM, 0xA1);
+  TEST_CRC8(CRC8_ROHC, 0xD0);
+  TEST_CRC8(CRC8_WCDMA, 0x25);
+
+#define TEST_CRC16(crc_type, val) std::cout << #crc_type << '\t' << (crc16(data, 9, crc_type) == val) << '\n';
 
   TEST_CRC16(CRC16_ARC, 0xBB3D);
   TEST_CRC16(CRC16_AUG_CCITT, 0xE5CC);
@@ -104,8 +141,7 @@ int main()
   TEST_CRC16(CRC16_X_25, 0x906E);
   TEST_CRC16(CRC16_XMODEM, 0x31C3);
 
-#define TEST_CRC32(crc_type, val) \
-  std::cout << #crc_type << '\t' << (crc32(data, 9, crc_type) == val) << '\n';
+#define TEST_CRC32(crc_type, val) std::cout << #crc_type << '\t' << (crc32(data, 9, crc_type) == val) << '\n';
 
   TEST_CRC32(CRC32, 0xCBF43926);
   TEST_CRC32(CRC32_BZIP2, 0xFC891918);
